@@ -4,7 +4,7 @@ import java.util.ArrayList;
 
 public class ProtocolBeta {
     public static String runProtocol(Voter[] voters, int numFaultyVoters) {
-        String[] methods = new String[] {"proposeTopChoice", "setPerplexed", "sendPerplexed", "setAlert"};
+        String[] methods = new String[] {"proposeTopChoice", "setPerplexed", "sendPerplexed", "setAlert", "eliminateUnqualified"};
 
         for (int i = 0; i < methods.length; i++) {
             ArrayList<Thread> allThreads = new ArrayList<>();

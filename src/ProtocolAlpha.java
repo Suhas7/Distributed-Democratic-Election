@@ -5,15 +5,19 @@ import java.util.HashMap;
 
 public class ProtocolAlpha {
     //TODO CONCERN: ONLY RELIES ON FIRST CHOICES
+
+    //TODO currently only consider the voters where alert=false
+    //TODO error when all alert = false (i.e. no majority)
+    //TODO currently return empty string because idk what the algo does there
     public static String runProtocol(Voter[] voters, int numFaultyVoters) {
-        String[] methods = new String[] {"proposeTopChoice", "setPerplexed", "sendPerplexed", "setAlert"};
+        String[] methods = new String[] {"proposeTopChoice", "handlePerplexed"};
 
         for (int i = 0; i < methods.length; i++) {
             ArrayList<Thread> allThreads = new ArrayList<>();
             final int finalI = i;
             for (int j = 0; j < voters.length; j++) {
                 final int finalJ = j;
-                Object[][] params = new Object[][] {new Object[] {voters, finalJ}, new Object[] {numFaultyVoters, finalJ}, new Object[] {voters, finalJ}, new Object[] {numFaultyVoters}};
+                Object[][] params = new Object[][] {new Object[] {voters, finalJ}, new Object[] {voters, numFaultyVoters, finalJ}};
                 Thread t = new Thread(() -> {
                     try {
                         Class[] classes = new Class[params[finalI].length];
@@ -43,43 +47,13 @@ public class ProtocolAlpha {
             }
         }
 
-        return reachAgreement(voters);
-    }
-
-    //TODO currently only consider the voters where alert=false
-    //TODO error when all alert = false (i.e. no majority)
-    //TODO currently return empty string because idk what the algo does there
-    private static String reachAgreement(Voter[] voters) {
-        HashMap<String, Integer> voteCounts = new HashMap<>();
-        int currMaxInt = 0;
-        String currMaxString = null;
-
+        ArrayList<String> votes = new ArrayList<>();
         for (Voter voter : voters) {
-            if (!voter.getAlert()) {
-                String currVote = voter.getVote();
-                if (voteCounts.containsKey(voter.getVote())) {
-                    int currAmt = voteCounts.get(currVote);
-                    voteCounts.remove(currVote);
-                    voteCounts.put(currVote, currAmt+1);
-
-                    if (currAmt+1 > currMaxInt) {
-                        currMaxInt = currAmt+1;
-                        currMaxString = currVote;
-                    } else if (currAmt+1 == currMaxInt) {
-                        if (currVote.compareTo(currMaxString) < 0) currMaxString = currVote;
-                    }
-                } else {
-                    voteCounts.put(currVote, 1);
-                    if (1 > currMaxInt) {
-                        currMaxInt = 1;
-                        currMaxString = currVote;
-                    } else if (1 == currMaxInt && currVote.compareTo(currMaxString) < 0) {
-                        currMaxString = currVote;
-                    }
-                }
-            }
+            String vote = voter.sendVote(numFaultyVoters);
+            if (vote != null) votes.add(vote);
         }
+        System.out.println(votes);
 
-        return currMaxString != null ? currMaxString : "";
+        return votes.size() > 0 ? votes.get(0) : "";
     }
 }
