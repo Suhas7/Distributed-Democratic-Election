@@ -46,20 +46,16 @@ public class ProtocolAlpha {
         return reachAgreement(voters);
     }
 
-    //TODO BELIEVE THERE'S AN ISSUE W/ REACH AGREEMENT
+    //TODO currently only consider the voters where alert=false
+    //TODO error when all alert = false (i.e. no majority)
+    //TODO currently return empty string because idk what the algo does there
     private static String reachAgreement(Voter[] voters) {
-        int trueCount = 0;
-        for (Voter voter : voters) {
-            if (voter.getAlert()) trueCount++;
-        }
-        if (trueCount > voters.length/2.0) {
-            return "don't know";
-        } else {
-            HashMap<String, Integer> voteCounts = new HashMap<>();
-            int currMaxInt = 0;
-            String currMaxString = null;
+        HashMap<String, Integer> voteCounts = new HashMap<>();
+        int currMaxInt = 0;
+        String currMaxString = null;
 
-            for (Voter voter : voters) {
+        for (Voter voter : voters) {
+            if (!voter.getAlert()) {
                 String currVote = voter.getVote();
                 if (voteCounts.containsKey(voter.getVote())) {
                     int currAmt = voteCounts.get(currVote);
@@ -82,7 +78,8 @@ public class ProtocolAlpha {
                     }
                 }
             }
-            return currMaxString;
         }
+
+        return currMaxString != null ? currMaxString : "";
     }
 }
