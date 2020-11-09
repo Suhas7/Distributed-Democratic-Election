@@ -10,50 +10,96 @@ public class ProtocolAlpha {
     //TODO error when all alert = false (i.e. no majority)
     //TODO currently return empty string because idk what the algo does there
     public static String runProtocol(Voter[] voters, int numFaultyVoters) {
-        String[] methods = new String[] {"proposeTopChoice", "handlePerplexed"};
+        ArrayList<Thread> allThreads;
 
-        for (int i = 0; i < methods.length; i++) {
-            ArrayList<Thread> allThreads = new ArrayList<>();
-            final int finalI = i;
-            for (int j = 0; j < voters.length; j++) {
-                final int finalJ = j;
-                Object[][] params = new Object[][] {new Object[] {voters, finalJ}, new Object[] {voters, numFaultyVoters, finalJ}};
+        //Step 1: For each voter, exchange first vote (done in Standard Byzantine Agreement)
+        //Step 2: Agree on votes -- Standard Byzantine Agreement
+        for (int kingIdx = 1; kingIdx <= numFaultyVoters + 1; kingIdx++) {
+            //First phase
+            allThreads = new ArrayList<>();
+            for (Voter voter : voters) {
                 Thread t = new Thread(() -> {
-                    try {
-                        Class[] classes = new Class[params[finalI].length];
-                        for (int k = 0; k < params[finalI].length; k++) {
-                            classes[k] = params[finalI][k].getClass();
-                        }
-
-                        Method currMethod = voters[finalJ].getClass().getMethod(methods[finalI], classes);
-                        currMethod.invoke(voters[finalJ], params[finalI]);
-                    } catch (NoSuchMethodException | SecurityException | IllegalArgumentException | IllegalAccessException | InvocationTargetException e) {
-                        throw new Error("Error: " + e + " on method: " + methods[finalI] + " because: " + e.getCause() + ", " + e.getLocalizedMessage());
-                    }
+                    voter.sendVote(voters);
                 });
                 allThreads.add(t);
             }
+            threadCleanUp(allThreads);
 
-            for (Thread t : allThreads) {
-                t.start();
+            allThreads = new ArrayList<>();
+            for (Voter voter : voters) {
+                Thread t = new Thread(() -> {
+                    voter.setMyValue();
+                });
+                allThreads.add(t);
             }
+            threadCleanUp(allThreads);
 
-            for (Thread t : allThreads) {
-                try {
-                    t.join();
-                } catch (InterruptedException e) {
-                    throw new Error("Interrupted exception in threads!");
-                }
+            //Second phase
+            voters[kingIdx-1].sendKingValue(voters);
+
+            allThreads = new ArrayList<>();
+            for (Voter voter : voters) {
+                Thread t = new Thread(() -> {
+                    voter.chooseMyOrKingVal(numFaultyVoters);
+                });
+                allThreads.add(t);
             }
+            threadCleanUp(allThreads);
         }
 
-        ArrayList<String> votes = new ArrayList<>();
+        ArrayList<String> finalVotes = new ArrayList<>();
+        allThreads = new ArrayList<>();
         for (Voter voter : voters) {
-            String vote = voter.sendVote(numFaultyVoters);
-            if (vote != null) votes.add(vote);
+            Thread t = new Thread(() -> {
+                finalVotes.add(voter.getFinalVote());
+            });
+            allThreads.add(t);
         }
-        System.out.println(votes);
+        threadCleanUp(allThreads);
 
-        return votes.size() > 0 ? votes.get(0) : "";
+        return findMajority(finalVotes);
+    }
+
+    private static void threadCleanUp(ArrayList<Thread> threads) {
+        startThreads(threads);
+        joinThreads(threads);
+    }
+
+    private static void startThreads(ArrayList<Thread> threads) {
+        for (Thread t : threads) t.start();
+    }
+
+    private static void joinThreads(ArrayList<Thread> threads) {
+        for (Thread t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                throw new Error("Interrupted exception in threads!");
+            }
+        }
+    }
+
+    private static String findMajority(ArrayList<String> votes) {
+        HashMap<String, Integer> voteCount = new HashMap<>();
+        int maxInt = 0;
+        String maxString = null;
+
+        for (String vote : votes) {
+            int newAmt = 1;
+            if (voteCount.containsKey(vote)) {
+                newAmt = voteCount.get(vote) + 1;
+                voteCount.remove(vote);
+            }
+
+            voteCount.put(vote, newAmt);
+            if (newAmt > maxInt) {
+                maxInt = newAmt;
+                maxString = vote;
+            } else if (newAmt == maxInt) {
+                if (vote.compareTo(maxString) < 0) maxString = vote;
+            }
+        }
+
+        return maxString;
     }
 }

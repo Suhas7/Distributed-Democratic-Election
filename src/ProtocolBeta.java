@@ -4,14 +4,14 @@ import java.util.ArrayList;
 
 public class ProtocolBeta {
     public static String runProtocol(Voter[] voters, int numFaultyVoters) {
-        String[] methods = new String[] {"proposeTopChoice", "setPerplexed", "sendPerplexed", "setAlert", "eliminateUnqualified"};
+        String[] methods = new String[] {"proposeTopChoice", "handlePerplexed"};
 
         for (int i = 0; i < methods.length; i++) {
             ArrayList<Thread> allThreads = new ArrayList<>();
             final int finalI = i;
             for (int j = 0; j < voters.length; j++) {
                 final int finalJ = j;
-                Object[][] params = new Object[][] {new Object[] {voters, finalJ}, new Object[] {numFaultyVoters, finalJ}, new Object[] {voters, finalJ}, new Object[] {numFaultyVoters}};
+                Object[][] params = new Object[][] {new Object[] {voters, finalJ}, new Object[] {voters, numFaultyVoters, finalJ}};
                 Thread t = new Thread(() -> {
                     try {
                         Class[] classes = new Class[params[finalI].length];
@@ -40,6 +40,15 @@ public class ProtocolBeta {
                 }
             }
         }
-        return "";
+
+        //TODO need to check if all votes are the same?
+        ArrayList<String> votes = new ArrayList<>();
+        for (Voter voter : voters) {
+//            String vote = voter.sendVote(numFaultyVoters);
+//            if (vote != null) votes.add(vote);
+        }
+        System.out.println(votes);
+
+        return votes.size() > 0 ? votes.get(0) : "";
     }
 }
